@@ -5,9 +5,16 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import Card from '@/components/Card';
 import Table from '@/components/Table';
+import { 
+  CheckCircleIcon,
+  MagnifyingGlassIcon,
+  ArrowPathIcon,
+  DocumentArrowDownIcon,
+  DocumentArrowUpIcon,
+  UserIcon,
+  CalendarIcon
+} from '@heroicons/react/24/outline';
 import QuickFollowupDrawer from '@/components/QuickFollowupDrawer';
-import FollowupTypeDropdown from '@/components/FollowupTypeDropdown';
-import ExpandableData from '@/components/ExpandableData';
 import { refreshFollowupData, Followup, fetchUserCompletedFollowup } from '@/api/followups';
 import { searchAndFilterItems, SEARCH_CONFIGS } from '@/utils/searchUtils';
 
@@ -29,7 +36,8 @@ export default function CompletedFollowupsPage() {
   const [leads, setLeads] = useState<FollowupRow[]>([]);
   const [selectedLead, setSelectedLead] = useState<FollowupRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState('completed');
+  const [error, setError] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Apply search and filtering to the leads data
   const filteredLeads = searchAndFilterItems(
@@ -42,15 +50,14 @@ export default function CompletedFollowupsPage() {
   const loadFollowups = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       let data: FollowupRow[] = [];
 
       const leadsWithFollowups: LeadWithFollowupApi[] = await fetchUserCompletedFollowup();
-      console.log('Raw completed API response:', leadsWithFollowups);
       
       data = leadsWithFollowups.flatMap(lead => {
         // Handle different possible data structures
         const followups = lead.followup?.all || lead.followups || [];
-        console.log(`Lead ${lead.lead_id} followups:`, followups);
         
         return followups.map((f: Followup) => ({
           ...f,
@@ -60,10 +67,10 @@ export default function CompletedFollowupsPage() {
         }));
       });
       
-      console.log('Completed followups:', data);
       setLeads(data);
     } catch (error) {
       console.error('Error loading completed followups:', error);
+      setError('Failed to load completed followups. Please try again.');
       setLeads([]);
     } finally {
       setLoading(false);
@@ -71,153 +78,271 @@ export default function CompletedFollowupsPage() {
   }, []);
 
   useEffect(() => {
-    // Clear cached data on page load to ensure fresh data
     if (typeof window !== 'undefined') {
       localStorage.removeItem("followups");
     }
     loadFollowups();
   }, [loadFollowups]);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
   const columns = [
-    { key: 'name', label: 'Name' },
+    { key: 'name', label: 'Lead Name' },
     { key: 'contact', label: 'Contact' },
-    { key: 'followup_date', label: 'Followup Date' },
+    { key: 'followup_date', label: 'Completion Date' },
     { key: 'followup_type', label: 'Type' },
     { key: 'status', label: 'Status' },
     { key: 'assign_to', label: 'Assigned To' },
-    { 
-      key: 'followup_remarks', 
-      label: 'Remarks',
-      render: (value: unknown) => value ? <ExpandableData data={value} label="Remarks" /> : '—'
-    },
-    { key: 'actions', label: 'Actions' }
+    { key: 'followup_remarks', label: 'Remarks' },
   ];
 
+  // Calculate summary statistics
+  const stats = React.useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayCompleted = leads.filter(lead => {
+      const followupDate = lead.followup_date || lead.tentetive_visit_date;
+      return followupDate && typeof followupDate === 'string' && followupDate.startsWith(today);
+    }).length;
+    
+    const thisMonthCompleted = leads.filter(lead => {
+      const followupDate = lead.followup_date || lead.tentetive_visit_date;
+      if (!followupDate || typeof followupDate !== 'string') return false;
+      const followupDateObj = new Date(followupDate);
+      const today = new Date();
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      return followupDateObj >= firstDayOfMonth && followupDateObj <= today;
+    }).length;
+    
+    const totalCompleted = leads.length;
+    
+    return {
+      total: totalCompleted,
+      today: todayCompleted,
+      thisMonth: thisMonthCompleted
+    };
+  }, [leads]);
+
+  const handleRefresh = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("followups");
+    }
+    await loadFollowups();
+  };
+
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    console.log('Export functionality to be implemented');
+  };
+
+  const handleImport = () => {
+    // TODO: Implement import functionality
+    console.log('Import functionality to be implemented');
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-200 via-emerald-100 to-green-50 flex items-center justify-center p-8">
+        <Card className="max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircleIcon className="w-8 h-8 text-green-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Error Loading Data</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button variant="primary" onClick={handleRefresh}>
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-200 via-orange-100 to-yellow-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <h1 className="text-4xl font-extrabold text-green-900 tracking-tight">Completed Followups</h1>
-        </div>
-        
-        {/* Dropdown and Controls */}
-        <div className="flex flex-wrap items-center gap-4 mb-8">
-          <div className="w-64">
-            <FollowupTypeDropdown
-              selectedType={selectedType}
-              onTypeChange={setSelectedType}
-              onRefresh={async () => {
-                console.log('Manual refresh triggered');
-                // Clear cached data and reload
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem("followups");
-                }
-                await loadFollowups();
-              }}
-              showNavigation={true}
-            />
+    <div className="min-h-screen bg-gradient-to-br from-green-200 via-emerald-100 to-green-50 p-0 flex">
+      {/* Main Content */}
+      <div className="flex-1 p-8">
+        {/* Header Section */}
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <CheckCircleIcon className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-extrabold text-green-900 tracking-tight">
+                    Completed Followups
+                  </h1>
+                  <p className="text-green-700 font-medium">
+                    Successfully completed followup activities
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-lg border border-green-200">
+                <span className="text-green-800 font-bold">Total:</span>
+                <span className="text-2xl font-extrabold text-green-900">{filteredLeads.length}</span>
+              </div>
+            </div>
           </div>
-          <Button variant="secondary" className="rounded-full px-4 py-2 shadow border border-green-200 hover:bg-green-300">Export</Button>
-          <span className="bg-green-100 px-4 py-2 rounded-full text-green-800 font-bold shadow border border-green-200">Total: {filteredLeads.length}</span>
-          <Input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="px-4 py-2 rounded-full border border-green-200 text-base focus:outline-none focus:ring-2 focus:ring-green-200 bg-green-50 text-green-900 shadow" />
-          <Button variant="secondary" className="rounded-full px-4 py-2 shadow border border-green-200 hover:bg-green-300" onClick={async () => {
-            console.log('Manual refresh triggered');
-            // Clear cached data and reload
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem("followups");
-            }
-            await loadFollowups();
-          }}>Refresh</Button>
-          <Button variant="secondary" className="rounded-full px-4 py-2 shadow border border-green-200 hover:bg-green-300">Import</Button>
-        </div>
-        
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-            <p className="mt-2 text-green-700">Loading completed followups...</p>
-          </div>
-        )}
-        
-        {/* Table Structure */}
-        {!loading && (
-          <Card className="overflow-x-auto rounded-2xl shadow-2xl border border-green-100 bg-white/90">
-            <Table columns={columns} data={filteredLeads} actions={(row: FollowupRow) => (
-              <Button variant="primary" className="rounded-full px-4 py-1" onClick={() => { setSelectedLead(row); setDrawerOpen(true); }}>View</Button>
-            )} />
-            <QuickFollowupDrawer
-              open={drawerOpen}
-              onClose={() => setDrawerOpen(false)}
-              followup={selectedLead}
-            onUpdate={async (updated: FollowupRow) => {
-              console.log('Received updated followup:', updated);
+
+          {/* Quick Actions Bar */}
+          <Card className="mb-8 p-6 bg-white/90 border border-green-100 shadow-xl rounded-2xl">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="relative flex-1 max-w-md">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input 
+                    type="text" 
+                    placeholder="Search completed followups..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                    className="pl-10 pr-4 py-3 rounded-xl border border-green-200 text-base focus:ring-2 focus:ring-green-400 bg-green-50"
+                  />
+                </div>
+              </div>
               
-              // Update the selected lead with the updated data
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button 
+                  variant="secondary" 
+                  onClick={handleExport}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl shadow border border-green-200 hover:bg-green-300"
+                >
+                  <DocumentArrowDownIcon className="w-5 h-5" />
+                  Export
+                </Button>
+                
+                <Button 
+                  variant="secondary" 
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl shadow border border-green-200 hover:bg-green-300"
+                >
+                  <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                  {loading ? 'Loading...' : 'Refresh'}
+                </Button>
+                
+                <Button 
+                  variant="secondary" 
+                  onClick={handleImport}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl shadow border border-green-200 hover:bg-green-300"
+                >
+                  <DocumentArrowUpIcon className="w-5 h-5" />
+                  Import
+                </Button>
+              </div>
+            </div>
+          </Card>
+          
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 hover:border-green-300 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <CheckCircleIcon className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-green-800 mb-2">Total Completed</div>
+                <div className="text-sm text-green-600 font-medium">All completed followups</div>
+                <div className="text-3xl font-extrabold text-green-900 mt-3">{stats.total}</div>
+              </div>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200 hover:border-emerald-300 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <CalendarIcon className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-800 mb-2">Today</div>
+                <div className="text-sm text-emerald-600 font-medium">Completed today</div>
+                <div className="text-3xl font-extrabold text-emerald-900 mt-3">{stats.today}</div>
+              </div>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200 hover:border-teal-300 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <UserIcon className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-teal-800 mb-2">This Month</div>
+                <div className="text-sm text-teal-600 font-medium">Completed this month</div>
+                <div className="text-3xl font-extrabold text-teal-900 mt-3">{stats.thisMonth}</div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <Card className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
+              <p className="text-green-700 font-medium text-lg">Loading completed followups...</p>
+            </Card>
+          )}
+
+          {/* Table Section */}
+          {!loading && (
+            <Card className="overflow-hidden rounded-2xl shadow-2xl border border-green-100 bg-white/90">
+              <div className="p-6 border-b border-green-100 bg-green-50">
+                <h2 className="text-xl font-bold text-green-900 flex items-center gap-2">
+                  <CheckCircleIcon className="w-6 h-6" />
+                  Completed Followups List
+                </h2>
+                <p className="text-green-700 mt-1">
+                  Showing {filteredLeads.length} of {leads.length} completed followups
+                </p>
+              </div>
+              
+              <Table 
+                columns={columns} 
+                data={filteredLeads} 
+                actions={(row: FollowupRow) => (
+                  <Button 
+                    variant="primary" 
+                    className="rounded-xl px-4 py-2 shadow-lg" 
+                    onClick={() => { 
+                      setSelectedLead(row); 
+                      setDrawerOpen(true); 
+                    }}
+                  >
+                    View Details
+                  </Button>
+                )} 
+              />
+            </Card>
+          )}
+
+          {/* Quick Followup Drawer */}
+          <QuickFollowupDrawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            followup={selectedLead}
+            onUpdate={async (updated: FollowupRow) => {
               setSelectedLead(updated);
               
-              // Update the leads array with the updated followup data
               setLeads(prev => {
-                console.log('Previous leads count:', prev.length);
-                console.log('Looking for followup to update:', updated);
-                
-                let foundAndUpdated = false;
-                
-                // Find and update the specific followup entry
                 const updatedLeads = prev.map(l => {
-                  // First try to match by ID if available
                   if (l && 'id' in l && 'id' in updated && l.id === updated.id) {
                     const mergedData = { ...l, ...updated };
-                    console.log('Updated followup by ID', l.id, ':', mergedData);
-                    foundAndUpdated = true;
                     return mergedData;
                   }
                   
-                  // Fallback: Check if this is the same followup by comparing lead_id and other unique identifiers
                   if (l && 'lead_id' in l && 'lead_id' in updated && l.lead_id === updated.lead_id) {
-                    // Create a unique identifier using multiple fields to ensure we update the correct followup
                     const originalKey = `${l.lead_id}-${l.followup_date}-${l.followup_type}-${l.followup_remarks || l.notes || ''}`;
                     const updatedKey = `${updated.lead_id}-${updated.followup_date}-${updated.followup_type}-${updated.followup_remarks || updated.notes || ''}`;
                     
-                    console.log('Comparing keys:', { originalKey, updatedKey, isMatch: originalKey === updatedKey });
-                    
-                    // Match by the unique key (excluding followup_type since that's what we're updating)
                     const isSameFollowup = originalKey === updatedKey;
                     
                     if (isSameFollowup) {
-                      // Merge the original data with the updated data to preserve all fields
                       const mergedData = { ...l, ...updated };
-                      console.log('Updated followup for lead_id', l.lead_id, ':', mergedData);
-                      foundAndUpdated = true;
                       return mergedData;
                     }
                   }
                   return l;
                 });
                 
-                if (!foundAndUpdated) {
-                  console.log('WARNING: No matching followup found to update!');
-                  console.log('Available followups:', prev.map(l => ({
-                    id: l.id,
-                    lead_id: l.lead_id,
-                    followup_date: l.followup_date,
-                    followup_type: l.followup_type,
-                    followup_remarks: l.followup_remarks,
-                    notes: l.notes
-                  })));
-                }
-                
-                // Improved deduplication logic to prevent duplicates after updates
                 const uniqueUpdatedLeads = updatedLeads.filter((followup, index, self) => {
-                  // Create a unique key for each followup
                   const key = followup.id 
                     ? `id-${followup.id}` 
                     : `${followup.lead_id}-${followup.followup_date}-${followup.followup_type}-${followup.followup_remarks || followup.notes || ''}`;
                   
-                  // Check if this is the first occurrence of this key
                   const isFirstOccurrence = index === self.findIndex(f => {
                     const fKey = f.id 
                       ? `id-${f.id}` 
@@ -225,34 +350,19 @@ export default function CompletedFollowupsPage() {
                     return fKey === key;
                   });
                   
-                  if (!isFirstOccurrence) {
-                    console.log('Removing duplicate followup after update:', followup);
-                  }
-                  
                   return isFirstOccurrence;
                 });
                 
-                console.log('Updated leads count:', uniqueUpdatedLeads.length);
                 return uniqueUpdatedLeads;
               });
               
-              // Refresh the followup data to ensure persistence across page reloads
               try {
                 await refreshFollowupData();
-                console.log('Followup data refreshed after update');
               } catch (error) {
                 console.warn('Failed to refresh followup data:', error);
               }
             }}
           />
-        </Card>
-        )}
-        
-        {/* Action/Summary Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-          <Card className="bg-green-100 rounded-2xl p-8 text-center font-extrabold text-green-800 shadow-md border border-green-200 text-lg md:text-xl">Completed Count</Card>
-          <Card className="bg-emerald-100 rounded-2xl p-8 text-center font-extrabold text-emerald-800 shadow-md border border-emerald-200 text-lg md:text-xl">Success Rate</Card>
-          <Card className="bg-teal-100 rounded-2xl p-8 text-center font-extrabold text-teal-800 shadow-md border border-teal-200 text-lg md:text-xl">This Month</Card>
         </div>
       </div>
     </div>

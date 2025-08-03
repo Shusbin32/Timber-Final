@@ -4,6 +4,7 @@ import { fetchLeadsByUser, Lead } from './leads';
 // Type for followup
 export interface Followup {
   id?: number;
+  followup_id?: number; // Add this to match server data structure
   lead_id: number;
   followup_date: string;
   followup_remarks?: string;
@@ -167,6 +168,11 @@ export async function updateFollowup(followup: Followup): Promise<Followup> {
     try {
       console.log('Attempting to update followup for lead ID:', leadId);
       console.log('Followup data being sent:', followup);
+      console.log('Followup ID fields:', { 
+        id: followup.id, 
+        followup_id: followup.followup_id,
+        lead_id: followup.lead_id 
+      });
       
       // Send followup data in a format that the lead update API might expect
       const updateData: Record<string, unknown> = {
@@ -209,16 +215,136 @@ export async function updateFollowup(followup: Followup): Promise<Followup> {
         lead_type: followup.followup_type,
         tentetive_visit_date: followup.followup_date,
         remarks: followup.followup_remarks,
+        // Add explicit followup update fields
+        update_followup: true,
+        followup_status: followup.status,
+        followup_completion_date: new Date().toISOString(),
       };
       
       console.log('Followup update payload:', followupUpdatePayload);
       
-      // Try to update the lead with followup information
-      const res = await fetch(getApiUrl(`/api/services/updatelead/${leadId}`), {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(followupUpdatePayload),
+      // Try multiple approaches to update the followup
+      let res;
+      let updateSuccessful = false;
+      
+      // Approach 1: Try to update the specific followup using the new updatefollowup endpoint
+      const followupId = followup.id || followup.followup_id;
+      console.log('🔍 Debug - Followup ID check:', { 
+        originalId: followup.id, 
+        followupId: followup.followup_id, 
+        resolvedId: followupId 
       });
+      
+      if (followupId) {
+        try {
+          console.log('🚀 Trying approach 1: Update specific followup by ID', followupId);
+          const requestBody = {
+            followup_type: followup.followup_type,
+            status: followup.status,
+            followup_remarks: followup.followup_remarks,
+            followup_date: followup.followup_date,
+            notes: followup.notes || ''
+          };
+          console.log('📤 Request body:', requestBody);
+          
+          res = await fetch(getApiUrl(`/api/services/updatefollowup/${followupId}`), {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(requestBody),
+          });
+          
+          console.log('📥 Response status:', res.status);
+          console.log('📥 Response headers:', Object.fromEntries(res.headers.entries()));
+          
+          if (res.ok) {
+            updateSuccessful = true;
+            console.log('✅ Approach 1 (direct followup update) successful');
+          } else {
+            const errorText = await res.text();
+            console.log('❌ Approach 1 (direct followup update) failed:', res.status, errorText);
+          }
+        } catch (error) {
+          console.log('💥 Approach 1 (direct followup update) error:', error);
+        }
+      } else {
+        console.log('⚠️ No followup ID found, skipping approach 1');
+      }
+      
+      // Approach 2: Fallback to lead update API if direct followup update failed
+      if (!updateSuccessful) {
+        try {
+          console.log('Trying approach 2: Update through lead API with followup data');
+          res = await fetch(getApiUrl(`/api/services/updatelead/${leadId}`), {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              ...followupUpdatePayload,
+              // Add explicit followup completion fields
+              followup_completed: true,
+              followup_completion_date: new Date().toISOString(),
+              followup_completion_remarks: followup.followup_remarks
+            }),
+          });
+          
+          if (res.ok) {
+            updateSuccessful = true;
+            console.log('Approach 2 (lead update) successful');
+          } else {
+            console.log('Approach 2 (lead update) failed, trying approach 3');
+          }
+        } catch (error) {
+          console.log('Approach 2 (lead update) error:', error);
+        }
+      }
+      
+      // Approach 3: Last resort - use updatefollowup endpoint to create a "completed" followup
+      if (!updateSuccessful) {
+        try {
+          console.log('Trying approach 3: Create completed followup via updatefollowup');
+          
+          // First, we need to get the followup ID for this lead
+          const currentFollowups = await fetchFollowups();
+          const currentFollowup = currentFollowups.find(f => f.lead_id === leadId);
+          
+          if (currentFollowup) {
+            const followupId = currentFollowup.id || currentFollowup.followup_id;
+            
+            if (followupId) {
+              const requestBody = {
+                followup_type: 'completed',
+                status: 'completed',
+                followup_remarks: followup.followup_remarks,
+                followup_date: new Date().toISOString(),
+                notes: currentFollowup.notes || ''
+              };
+              
+              res = await fetch(getApiUrl(`/api/services/updatefollowup/${followupId}`), {
+                method: "PUT",
+                headers: getAuthHeaders(),
+                body: JSON.stringify(requestBody),
+              });
+              
+              if (res.ok) {
+                updateSuccessful = true;
+                console.log('Approach 3 (updatefollowup completion) successful');
+              } else {
+                console.log('Approach 3 (updatefollowup completion) failed');
+              }
+            } else {
+              console.log('Approach 3: No followup ID found');
+            }
+          } else {
+            console.log('Approach 3: No followup found for this lead');
+          }
+        } catch (error) {
+          console.log('Approach 3 (updatefollowup completion) error:', error);
+        }
+      }
+      
+      // If both approaches failed, throw an error
+      if (!updateSuccessful || !res) {
+        throw new Error('All update approaches failed');
+      }
       
       console.log('Response status:', res.status);
       console.log('Response status text:', res.statusText);
@@ -313,22 +439,68 @@ export async function rescheduleFollowup(
     }
   } else {
     try {
-      const response = await fetch(getApiUrl(`/api/services/followupleadreschedule/${leadId}`), {
-        method: 'POST',
+      console.log('🔄 Debug - Reschedule followup called');
+      console.log('🔄 Debug - Lead ID:', leadId);
+      console.log('🔄 Debug - Reschedule data:', data);
+      
+      // First, we need to get the followup ID for this lead
+      // We'll use the existing followups to find the current followup
+      const currentFollowups = await fetchFollowups();
+      const currentFollowup = currentFollowups.find(f => f.lead_id === leadId);
+      
+      if (!currentFollowup) {
+        throw new Error('No followup found for this lead');
+      }
+      
+      const followupId = currentFollowup.id || currentFollowup.followup_id;
+      console.log('🔄 Debug - Found followup ID:', followupId);
+      
+      if (!followupId) {
+        throw new Error('Followup ID not found');
+      }
+      
+      // Use the new updatefollowup endpoint for rescheduling
+      const requestBody = {
+        followup_type: data.followup_type,
+        status: data.followup_type === 'completed' ? 'completed' : 'pending',
+        followup_remarks: data.followup_remarks,
+        followup_date: data.followup_date,
+        notes: currentFollowup.notes || ''
+      };
+      
+      console.log('🔄 Debug - Reschedule request body:', requestBody);
+      
+      const response = await fetch(getApiUrl(`/api/services/updatefollowup/${followupId}`), {
+        method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+        body: JSON.stringify(requestBody),
       });
       
+      console.log('🔄 Debug - Reschedule response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log('🔄 Debug - Reschedule error response:', errorText);
         throw new Error(`Failed to reschedule followup: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
+      console.log('🔄 Debug - Reschedule successful, response:', result);
       
       // Refresh followup data after successful reschedule
       await refreshFollowupData();
       
-      return result.data || result;
+      // Return the updated followup data
+      const updatedFollowup = {
+        ...currentFollowup,
+        ...result.data || result,
+        followup_date: data.followup_date,
+        followup_remarks: data.followup_remarks,
+        followup_type: data.followup_type,
+        status: data.followup_type === 'completed' ? 'completed' : 'pending'
+      };
+      
+      return updatedFollowup;
     } catch (error) {
       console.error('Error rescheduling followup:', error);
       throw error;
@@ -397,5 +569,33 @@ export async function fetchUserPendingFollowup(filters: Record<string, string | 
   } catch (error) {
     console.error('Error fetching user pending followups:', error);
     throw error;
+  }
+}
+
+// Function to fetch a specific followup by ID
+export async function fetchFollowupById(followupId: number): Promise<Followup> {
+  if (USE_MOCKS) {
+    const followups = JSON.parse(localStorage.getItem("followups") || "[]");
+    const followup = followups.find((f: Followup) => f.id === followupId);
+    if (!followup) {
+      throw new Error('Followup not found');
+    }
+    return followup;
+  } else {
+    try {
+      const res = await fetch(getApiUrl(`/api/services/getfollowupbyid/${followupId}`), {
+        headers: getAuthHeaders(),
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch followup: ${res.status} ${res.statusText}`);
+      }
+      
+      const result = await res.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching followup by ID:', error);
+      throw error;
+    }
   }
 }

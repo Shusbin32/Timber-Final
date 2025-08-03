@@ -57,7 +57,7 @@ export const API_ENDPOINTS = {
   OVERDUE_FOLLOWUP_BY_ID: (id: number) => `/api/services/getoverduefollowupbyid/${id}`,
   ALL_PENDING_FOLLOWUP: '/api/services/getallpendingfollowup',
   PENDING_FOLLOWUP_BY_ID: (id: number) => `/api/services/getpendingfollowupbyid/${id}`,
-  RESCHEDULE_FOLLOWUP: (id: number) => `/api/services/followupleadreschedule/${id}`,
+  RESCHEDULE_FOLLOWUP: (id: number) => `/api/services/updatefollowup/${id}`,
   
   // Lead logs endpoints
   LEAD_LOGS: '/api/services/allleadlogdetails',

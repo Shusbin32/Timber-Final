@@ -83,8 +83,13 @@ class Followup(models.Model):
     followup_date = models.DateTimeField(null=True)
     followup_type = models.CharField(null=True, max_length=120, choices=[("overdue","Overdue"),
     ("pending","Pending"),("completed","Completed"), ])
+    status = models.CharField(null=True, max_length=120, choices=[("pending","Pending"),
+    ("in_progress","In Progress"),("completed","Completed"),("cancelled","Cancelled")])
     followup_remarks = models.TextField(null=True)
+    notes = models.TextField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     entry_date = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return f"Followup {self.lead} by {self.user}"

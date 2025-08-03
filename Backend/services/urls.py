@@ -41,6 +41,7 @@ urlpatterns = [
     path("getallfollowup", getallfollowup), #get all followup
     path("followupleadreschedule/<int:id>", followup_lead_reschedule), #followup lead reschedule
     path("getfollowupbyid/<int:id>", getfollowupbyid), #get followup by id
+    path("updatefollowup/<int:id>", updatefollowup), #update followup by id
     path("getallcompletedfollowup", getallcompletedfollowup), #get all completed followup
     path("getcompletedfollowupbyid/<int:id>", getcompletedfollowupbyid), #get completed followup by id
     path("getalloverduefollowup", getalloverduefollowup), #get all overdue followup

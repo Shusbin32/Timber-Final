@@ -2,8 +2,11 @@ import re
 from django.http import JsonResponse
 from numpy.random import f
 from rest_framework.decorators import api_view
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from .imports_helper.helper import *
 from services.models import *
+from .serializers import FollowupSerializer
 from user.essentials import *
 from user.views import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -2871,6 +2874,90 @@ def getcompletedfollowupbyid(request,id):
 
     except Exception as e:
         return sendError(f"{e}")
+
+
+@api_view(['PUT'])
+def updatefollowup(request, id):
+    """
+    Update a specific followup by ID with validation and logging
+    """
+    token = decodeToken(request)
+    if token.get('error'):
+        return sendError(token.get("message"))
+    
+    try:
+        # Get the followup
+        followup = get_object_or_404(Followup, followup_id=id)
+        
+        # Store original values for logging
+        original_status = followup.status
+        original_type = followup.followup_type
+        
+        # Update fields with validation
+        update_fields = []
+        
+        # Update followup_type
+        if 'followup_type' in request.data:
+            new_type = request.data['followup_type']
+            if new_type != followup.followup_type:
+                followup.followup_type = new_type
+                update_fields.append(f'followup_type: {original_type} → {new_type}')
+        
+        # Update status
+        if 'status' in request.data:
+            new_status = request.data['status']
+            if new_status != followup.status:
+                followup.status = new_status
+                update_fields.append(f'status: {original_status} → {new_status}')
+        
+        # Update remarks
+        if 'followup_remarks' in request.data:
+            followup.followup_remarks = request.data['followup_remarks']
+            update_fields.append('followup_remarks updated')
+        
+        # Update date
+        if 'followup_date' in request.data:
+            followup.followup_date = request.data['followup_date']
+            update_fields.append('followup_date updated')
+        
+        # Update notes
+        if 'notes' in request.data:
+            followup.notes = request.data['notes']
+            update_fields.append('notes updated')
+        
+        # Handle completion
+        is_completing = (
+            request.data.get('status') == 'completed' or 
+            request.data.get('followup_type') == 'completed'
+        )
+        
+        if is_completing and not followup.completed_at:
+            followup.completed_at = timezone.now()
+            update_fields.append('marked as completed')
+        
+        # Update timestamp
+        followup.updated_at = timezone.now()
+        
+        # Save if there are changes
+        if update_fields:
+            followup.save()
+            
+            # Log the update (optional)
+            print(f"Followup {id} updated: {', '.join(update_fields)}")
+            
+            # Serialize and return
+            serializer = FollowupSerializer(followup)
+            
+            return sendSuccess(serializer.data, f"Followup updated successfully. Changes: {', '.join(update_fields)}")
+        else:
+            return sendSuccess(FollowupSerializer(followup).data, "No changes made to followup")
+            
+    except Followup.DoesNotExist:
+        return sendError("Followup not found")
+        
+    except Exception as e:
+        print(f"Error updating followup {id}: {str(e)}")
+        return sendError(f"Error updating followup: {str(e)}")
 
 
 #import for leads
