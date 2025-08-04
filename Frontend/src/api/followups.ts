@@ -275,8 +275,8 @@ export async function updateFollowup(followup: Followup): Promise<Followup> {
         try {
           console.log('Trying approach 2: Update through lead API with followup data');
           res = await fetch(getApiUrl(`/api/services/updatelead/${leadId}`), {
-            method: "PUT",
-            headers: getAuthHeaders(),
+        method: "PUT",
+        headers: getAuthHeaders(),
             body: JSON.stringify({
               ...followupUpdatePayload,
               // Add explicit followup completion fields
@@ -284,7 +284,7 @@ export async function updateFollowup(followup: Followup): Promise<Followup> {
               followup_completion_date: new Date().toISOString(),
               followup_completion_remarks: followup.followup_remarks
             }),
-          });
+      });
           
           if (res.ok) {
             updateSuccessful = true;

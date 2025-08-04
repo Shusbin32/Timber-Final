@@ -121,10 +121,10 @@ export default function CompletedFollowupsPage() {
   }, [leads]);
 
   const handleRefresh = async () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem("followups");
-    }
-    await loadFollowups();
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem("followups");
+                }
+                await loadFollowups();
   };
 
   const handleExport = () => {
@@ -267,10 +267,10 @@ export default function CompletedFollowupsPage() {
                 <div className="text-3xl font-extrabold text-teal-900 mt-3">{stats.thisMonth}</div>
               </div>
             </Card>
-          </div>
-
-          {/* Loading State */}
-          {loading && (
+        </div>
+        
+        {/* Loading State */}
+        {loading && (
             <Card className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
               <p className="text-green-700 font-medium text-lg">Loading completed followups...</p>
@@ -288,7 +288,7 @@ export default function CompletedFollowupsPage() {
                 <p className="text-green-700 mt-1">
                   Showing {filteredLeads.length} of {leads.length} completed followups
                 </p>
-              </div>
+          </div>
               
               <Table 
                 columns={columns} 
@@ -310,10 +310,10 @@ export default function CompletedFollowupsPage() {
           )}
 
           {/* Quick Followup Drawer */}
-          <QuickFollowupDrawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            followup={selectedLead}
+            <QuickFollowupDrawer
+              open={drawerOpen}
+              onClose={() => setDrawerOpen(false)}
+              followup={selectedLead}
             onUpdate={async (updated: FollowupRow) => {
               setSelectedLead(updated);
               

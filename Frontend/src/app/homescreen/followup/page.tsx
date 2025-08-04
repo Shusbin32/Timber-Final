@@ -183,9 +183,9 @@ export default function FollowupPage() {
           }))
         ).filter((f) => f.followup_type === 'completed');
       }
-      
+        
       // Improved deduplication logic
-      const uniqueFollowups = data.filter((followup, index, self) => {
+        const uniqueFollowups = data.filter((followup, index, self) => {
         const key = followup.id 
           ? `id-${followup.id}` 
           : `${followup.lead_id}-${followup.followup_date}-${followup.followup_type}-${followup.followup_remarks || followup.notes || ''}`;
@@ -198,9 +198,9 @@ export default function FollowupPage() {
           });
           
         return isFirstOccurrence;
-      });
+        });
         
-      setLeads(uniqueFollowups);
+        setLeads(uniqueFollowups);
     } catch (error) {
       console.error('Error loading followups:', error);
       setError('Failed to load followups. Please try again.');
@@ -302,12 +302,12 @@ export default function FollowupPage() {
             <div className="p-6 space-y-6">
               <Button
                 variant="gradient"
-                onClick={() => {
-                  setFilterDate('any');
-                  setFilterStatus('any');
-                  setFilterAssigned('any');
-                  setFilterType('any');
-                }}
+              onClick={() => {
+                setFilterDate('any');
+                setFilterStatus('any');
+                setFilterAssigned('any');
+                setFilterType('any');
+              }}
                 className="w-full"
               >
                 Clear All Filters
@@ -327,7 +327,7 @@ export default function FollowupPage() {
                       className="accent-yellow-600 scale-110" 
                     /> 
                     <span className="font-medium text-black">All Dates</span>
-                  </label>
+              </label>
                   <label className="flex items-center gap-3 cursor-pointer hover:bg-yellow-200 rounded-lg px-3 py-2 transition">
                     <input 
                       type="radio" 
@@ -338,8 +338,8 @@ export default function FollowupPage() {
                       className="accent-yellow-600 scale-110" 
                     /> 
                     <span className="font-medium text-black">Today Only</span>
-                  </label>
-                </div>
+              </label>
+            </div>
               </div>
 
               {/* Status Filter */}
@@ -363,30 +363,30 @@ export default function FollowupPage() {
                         className="accent-yellow-600 scale-110" 
                       /> 
                       <span className="font-medium text-black">{status.label}</span>
-                    </label>
+              </label>
                   ))}
                 </div>
-              </div>
+            </div>
 
               {/* Assigned To Filter */}
               <div className="space-y-3">
                 <h4 className="font-bold text-yellow-800 text-lg">Assigned To</h4>
-                <select
+              <select
                   className="w-full rounded-xl border-2 border-yellow-200 py-3 px-4 text-yellow-900 bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-200 font-semibold shadow-lg hover:border-yellow-400 transition-all duration-200"
-                  value={filterAssigned}
-                  onChange={e => setFilterAssigned(e.target.value)}
-                >
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>{user.name}</option>
-                  ))}
-                </select>
-              </div>
+                value={filterAssigned}
+                onChange={e => setFilterAssigned(e.target.value)}
+              >
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))}
+              </select>
+            </div>
 
               {/* Followup Type Filter */}
               <div className="space-y-3">
                 <h4 className="font-bold text-yellow-800 text-lg">Followup Type</h4>
                 <div className="space-y-2">
-                  {followupTypes.map(type => (
+              {followupTypes.map(type => (
                     <label key={type.value} className="flex items-center gap-3 cursor-pointer hover:bg-yellow-200 rounded-lg px-3 py-2 transition">
                       <input 
                         type="radio" 
@@ -397,8 +397,8 @@ export default function FollowupPage() {
                         className="accent-yellow-600 scale-110" 
                       /> 
                       <span className="font-medium text-black">{type.label}</span>
-                    </label>
-                  ))}
+                </label>
+              ))}
                 </div>
               </div>
             </div>
@@ -414,7 +414,7 @@ export default function FollowupPage() {
               }
             `}</style>
           </div>
-        </aside>
+      </aside>
       )}
       
       {/* Main Content */}
@@ -439,14 +439,14 @@ export default function FollowupPage() {
             </div>
             
             <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                variant="gradient"
-                onClick={() => setShowFilters(f => !f)}
+            <Button
+              variant="gradient"
+              onClick={() => setShowFilters(f => !f)}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl shadow-lg"
-              >
+            >
                 <FunnelIcon className="w-5 h-5" /> 
                 {showFilters ? 'Hide' : 'Show'} Filters
-              </Button>
+            </Button>
               
               <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 shadow-lg border border-yellow-200">
                 <span className="text-yellow-800 font-bold">Total:</span>
@@ -468,9 +468,9 @@ export default function FollowupPage() {
                     onChange={e => setSearch(e.target.value)} 
                     className="pl-10 pr-4 py-3 rounded-xl border border-yellow-200 text-base focus:ring-2 focus:ring-yellow-400 bg-yellow-50"
                   />
-                </div>
-              </div>
-              
+          </div>
+        </div>
+        
               <div className="flex items-center gap-3 flex-wrap">
                 <Button 
                   variant="secondary" 
@@ -510,65 +510,65 @@ export default function FollowupPage() {
               className="cursor-pointer"
             >
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all duration-300 border-2 border-blue-200 hover:border-blue-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-                <div className="text-center p-6">
+              <div className="text-center p-6">
                   <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <CalendarIcon className="w-7 h-7 text-white" />
                   </div>
                   <div className="text-2xl font-bold text-blue-800 mb-2">All Followups</div>
                   <div className="text-sm text-blue-600 font-medium">View all followup activities</div>
                   <div className="text-3xl font-extrabold text-blue-900 mt-3">{stats.total}</div>
-                </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
+          </div>
             
             <div 
               onClick={() => window.location.href = '/homescreen/followup/overdue'} 
               className="cursor-pointer"
             >
               <Card className="bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 transition-all duration-300 border-2 border-red-200 hover:border-red-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-                <div className="text-center p-6">
+              <div className="text-center p-6">
                   <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <ExclamationTriangleIcon className="w-7 h-7 text-white" />
                   </div>
                   <div className="text-2xl font-bold text-red-800 mb-2">Overdue</div>
                   <div className="text-sm text-red-600 font-medium">Urgent followups requiring attention</div>
                   <div className="text-3xl font-extrabold text-red-900 mt-3">{stats.overdue}</div>
-                </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
+          </div>
             
             <div 
               onClick={() => window.location.href = '/homescreen/followup/pending'} 
               className="cursor-pointer"
             >
               <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 transition-all duration-300 border-2 border-yellow-200 hover:border-yellow-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-                <div className="text-center p-6">
+              <div className="text-center p-6">
                   <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <ClockIcon className="w-7 h-7 text-white" />
                   </div>
                   <div className="text-2xl font-bold text-yellow-800 mb-2">Pending</div>
                   <div className="text-sm text-yellow-600 font-medium">Scheduled followups</div>
                   <div className="text-3xl font-extrabold text-yellow-900 mt-3">{stats.today}</div>
-                </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
+          </div>
             
             <div 
               onClick={() => window.location.href = '/homescreen/followup/completed'} 
               className="cursor-pointer"
             >
               <Card className="bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all duration-300 border-2 border-green-200 hover:border-green-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-                <div className="text-center p-6">
+              <div className="text-center p-6">
                   <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <CheckCircleIcon className="w-7 h-7 text-white" />
                   </div>
                   <div className="text-2xl font-bold text-green-800 mb-2">Completed</div>
                   <div className="text-sm text-green-600 font-medium">Finished followups</div>
                   <div className="text-3xl font-extrabold text-green-900 mt-3">{stats.completed}</div>
-                </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
           </div>
+        </div>
 
           {/* Loading State */}
           {isLoading && (

@@ -1,3 +1,5 @@
+// shusbin32/timber-final/Timber-Final-6609a24560b5fa4bbbade4c375cf5e79142e18bf/Frontend/src/app/homescreen/page.tsx
+
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -18,6 +20,8 @@ import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   CalendarIcon,
+  BoltIcon, 
+  CloudIcon,
 } from "@heroicons/react/24/outline";
 import {
   FaceSmileIcon,
@@ -39,6 +43,9 @@ interface DashboardData {
   totalLeads: number;
   customers: number;
   leadStatus: {
+    hot: number;
+    warm: number;
+    cold: number;
     afterVisit: number;
     beforeVisit: number;
     rawData: number;
@@ -196,6 +203,9 @@ export default function HomeScreen() {
     totalLeads: 0,
     customers: 0,
     leadStatus: {
+      hot: 0,
+      warm: 0,
+      cold: 0,
       afterVisit: 0,
       beforeVisit: 0,
       rawData: 0,
@@ -268,6 +278,9 @@ export default function HomeScreen() {
 
         // Calculate lead status counts
         const leadStatus = {
+          hot: leads.filter((lead: Lead) => lead.lead_type === 'Hot').length,
+          warm: leads.filter((lead: Lead) => lead.lead_type === 'Warm').length,
+          cold: leads.filter((lead: Lead) => lead.lead_type === 'Cold').length,
           afterVisit: leads.filter((lead: Lead) => lead.lead_type === 'After Visit').length,
           beforeVisit: leads.filter((lead: Lead) => lead.lead_type === 'Before Visit').length,
           rawData: leads.filter((lead: Lead) => lead.lead_type === 'Raw Data').length,
@@ -439,7 +452,13 @@ export default function HomeScreen() {
       }
     }
 
+    // Call it initially and then every 60 seconds
     fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 60000); // Poll every 60 seconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
+
   }, []);
 
   // Close dropdown on outside click
@@ -505,7 +524,7 @@ export default function HomeScreen() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <div className="text-red-500 text-xl mb-4">Error loading data.</div>
           <p className="text-gray-600">{error}</p>
           <button 
             onClick={() => window.location.reload()} 
@@ -551,6 +570,42 @@ export default function HomeScreen() {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-2 sm:gap-4 w-full md:w-auto justify-end">
+              {/* Hot Leads Notification Button */}
+              {dashboardData.leadStatus.hot > 0 && (
+                <button
+                  onClick={() => router.push('/homescreen/leads?type=Hot')}
+                  className="relative flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl border border-red-200 transition-all duration-200"
+                >
+                  <FireIcon className="w-5 h-5" />
+                  <span className="font-semibold text-sm">{dashboardData.leadStatus.hot}</span>
+                  <span className="text-xs">hot leads</span>
+                </button>
+              )}
+
+              {/* Warm Leads Notification Button */}
+              {dashboardData.leadStatus.warm > 0 && (
+                <button
+                  onClick={() => router.push('/homescreen/leads?type=Warm')}
+                  className="relative flex items-center gap-2 px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl border border-orange-200 transition-all duration-200"
+                >
+                  <BoltIcon className="w-5 h-5" />
+                  <span className="font-semibold text-sm">{dashboardData.leadStatus.warm}</span>
+                  <span className="text-xs">warm leads</span>
+                </button>
+              )}
+
+              {/* Cold Leads Notification Button */}
+              {dashboardData.leadStatus.cold > 0 && (
+                <button
+                  onClick={() => router.push('/homescreen/leads?type=Cold')}
+                  className="relative flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200"
+                >
+                  <CloudIcon className="w-5 h-5" />
+                  <span className="font-semibold text-sm">{dashboardData.leadStatus.cold}</span>
+                  <span className="text-xs">cold leads</span>
+                </button>
+              )}
+
               {/* Notifications */}
               <button className="relative p-2 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-200 hover:bg-white/80 transition-all duration-200">
                 <BellIcon className="w-5 h-5 text-gray-600" />
@@ -693,8 +748,13 @@ export default function HomeScreen() {
         {/* Lead Status Overview */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Status Overview</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-4 w-full">
-            <StatusCard title="After Visit" value={dashboardData.leadStatus.afterVisit} icon={FireIcon} color="red" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 gap-2 md:gap-4 w-full">
+            {/* New Hot, Warm, Cold leads */}
+            <StatusCard title="Hot" value={dashboardData.leadStatus.hot} icon={FireIcon} color="red" />
+            <StatusCard title="Warm" value={dashboardData.leadStatus.warm} icon={BoltIcon} color="orange" />
+            <StatusCard title="Cold" value={dashboardData.leadStatus.cold} icon={CloudIcon} color="blue" />
+            {/* Existing leads */}
+            <StatusCard title="After Visit" value={dashboardData.leadStatus.afterVisit} icon={FaceSmileIcon} color="purple" />
             <StatusCard title="Before Visit" value={dashboardData.leadStatus.beforeVisit} icon={FaceSmileIcon} color="orange" />
             <StatusCard title="Raw Data" value={dashboardData.leadStatus.rawData} icon={ArrowPathIcon} color="blue" />
             <StatusCard title="Unrated" value={dashboardData.leadStatus.unrated} icon={FaceFrownIcon} color="yellow" />
